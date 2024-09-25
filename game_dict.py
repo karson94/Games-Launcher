@@ -1,5 +1,5 @@
 # Dictionary mapping game names and their acronyms to their Steam AppIDs
-STEAM_GAME_IDS = {
+STEAM_GAME_DICT = {
     "satisfactory": "526870",
     "sf": "526870",
     "slay the spire": "646570",
@@ -73,6 +73,12 @@ STEAM_GAME_IDS = {
     "cod: world at war": "10090",
     "shellshock live": "326460",
     "peglin": "1296610",
+}
+
+EPIC_GAME_DICT = {
+    "fortnite": "Fortnite",
+    "rocket league": "Sugar",
+    "slime rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis",
 }
 
 STEAM_ROUGLIKES = {

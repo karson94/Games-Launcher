@@ -1,6 +1,6 @@
 # Games Launcher
 
-A simple command-line tool to launch your favorite games from Steam and Epic Games Store.
+A versatile command-line tool to launch your favorite games from Steam and Epic Games Store with ease.
 
 ## Features
 
@@ -8,6 +8,7 @@ A simple command-line tool to launch your favorite games from Steam and Epic Gam
 - Fuzzy matching for game names
 - Random roguelike launcher
 - Cross-platform support (Windows, macOS, Linux)
+- Automatic game suggestion for misspelled names
 
 ## Prerequisites
 
@@ -49,6 +50,31 @@ A simple command-line tool to launch your favorite games from Steam and Epic Gam
      ```
 
 2. (Optional) Add roguelike games to the `STEAM_ROUGLIKES` dictionary in `game_dict.py`.
+
+3. To get the Epic Games game ID:
+   a. Open the Epic Games Launcher
+   b. Go to your Library
+   c. Find the game you want to add
+   d. Click on the three dots (...) next to the game title
+   e. Select "Manage"
+   f. Select "Create Desktop Shortcut"
+   g. Right-click on the newly created shortcut and select "Properties"
+   h. In the "Target" field, you'll see a URL like this:
+      ```
+      com.epicgames.launcher://apps/[long_string_of_characters]?action=launch&silent=true
+      ```
+   i. The `[long_string_of_characters]` is the game ID you need to use in the `EPIC_GAME_DICT`
+
+   Example:
+   ```python
+   EPIC_GAME_DICT = {
+       "fortnite": "Fortnite",
+       "rocket league": "Sugar",
+       "slime rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis",
+   }
+   ```
+
+4. After adding new games, save the `game_dict.py` file.
 
 ## Usage
 
