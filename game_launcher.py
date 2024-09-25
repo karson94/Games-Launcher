@@ -56,11 +56,11 @@ def launch_steam_game(app_id):
 def launch_epic_game(app_name):
     system = platform.system()
     if system == "Windows":
-        epic_launcher = r"C:\Program Files (x86)\Epic Games\Launcher\Portal\Binaries\Win32\EpicGamesLauncher.exe"
-        subprocess.Popen([epic_launcher, "-com.epicgames.launcher://apps/" + app_name + "?action=launch", "&silent"])
+        epic_url = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
+        os.system(f'start "" "{epic_url}"')
     elif system == "Darwin":  # macOS
-        epic_launcher = "/Applications/Epic Games Launcher.app/Contents/MacOS/EpicGamesLauncher"
-        subprocess.Popen([epic_launcher, "-com.epicgames.launcher://apps/" + app_name + "?action=launch", "&silent"])
+        epic_url = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
+        os.system(f'open "{epic_url}"')
     else:
         print(f"Epic Games Launcher is not supported on {system}")
 
