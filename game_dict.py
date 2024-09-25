@@ -75,6 +75,12 @@ STEAM_GAME_DICT = {
     "peglin": "1296610",
 }
 
+EPIC_GAME_DICT = {
+    "fortnite": "Fortnite",
+    "rocket league": "Sugar",
+    "slime rancher": "SlimeRancher"  # Changed this line
+}
+
 STEAM_ROUGLIKES = {
     "slay the spire": "646570",
     "vampire survivors": "1794680",
