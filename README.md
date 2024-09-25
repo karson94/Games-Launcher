@@ -31,20 +31,15 @@ A versatile command-line tool to launch your favorite games from Steam and Epic 
 
 ## Configuration
 
-1. Open `game_dict.py` and add your games to the appropriate dictionaries:
+To use this game launcher, you need to set up your Steam API key and Steam ID. You have two options:
 
-   - For Steam games:
-     ```python
-     STEAM_GAME_DICT = {
-         "game nickname": "steam_app_id",
-         # Add more games...
-     }
-     ```
+1. Edit `config.py` directly with your Steam API key and Steam ID.
+2. Create a `personal_config.py` file with your Steam API key and Steam ID. This file will be ignored by git, keeping your personal information private.
 
    - For Epic Games:
      ```python
      EPIC_GAME_DICT = {
-         "game nickname": "EpicInternalName",
+         "game nickname": "epic_game_id",
          # Add more games...
      }
      ```
@@ -52,27 +47,27 @@ A versatile command-line tool to launch your favorite games from Steam and Epic 
 2. (Optional) Add roguelike games to the `STEAM_ROUGLIKES` dictionary in `game_dict.py`.
 
 3. To get the Epic Games game ID:
-   a. Open the Epic Games Launcher
-   b. Go to your Library
-   c. Find the game you want to add
-   d. Click on the three dots (...) next to the game title
-   e. Select "Manage"
-   f. Select "Create Desktop Shortcut"
-   g. Right-click on the newly created shortcut and select "Properties"
-   h. In the "Target" field, you'll see a URL like this:
+   - Open the Epic Games Launcher
+   - Go to your Library
+   - Find the game you want to add
+   - Click on the three dots (...) next to the game title
+   - Select "Manage"
+   - Select "Create Desktop Shortcut"
+   - Right-click on the newly created shortcut and select "Properties"
+   - In the "Target" field, you'll see a URL like this:
       ```
       com.epicgames.launcher://apps/[long_string_of_characters]?action=launch&silent=true
       ```
-   i. The `[long_string_of_characters]` is the game ID you need to use in the `EPIC_GAME_DICT`
+   - The `[long_string_of_characters]` is the game ID you need to use in the `EPIC_GAME_DICT`
 
    Example:
    ```python
-   EPIC_GAME_DICT = {
-       "fortnite": "Fortnite",
-       "rocket league": "Sugar",
-       "slime rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis",
+   # This dictionary is now stored in epic_games.json
+   {
+       "Slime Rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis"
    }
    ```
+   The `epic_games.json` file will be automatically updated when you run the game launcher.
 
 4. After adding new games, save the `game_dict.py` file.
 
@@ -82,7 +77,7 @@ A versatile command-line tool to launch your favorite games from Steam and Epic 
 
 Run the script with a game name as an argument:
 ```
-python game_launcher.py "game name"
+python game_launcher.py "Slay The Spire"
 ```
 
 ### PowerShell Integration
@@ -108,7 +103,7 @@ To use the game launcher directly from PowerShell:
 
 Now you can launch games by typing:
 ```
-game "game name"
+game Slay The Spire
 ```
 
 ## Troubleshooting
