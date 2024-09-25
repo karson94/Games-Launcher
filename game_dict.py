@@ -1,90 +1,50 @@
-# Dictionary mapping game names and their acronyms to their Steam AppIDs
-STEAM_GAME_DICT = {
-    "sf": "526870",
-    "satisfactory": "526870",
-    "sts": "646570",
-    "slay the spire": "646570",
-    "dungeons & degenerate gamblers": "2255420",
-    "dicey dungeons": "861540",
-    "factorio": "427520",
-    "drg: survivor": "2349400",
-    "jackbox 7": "1211630",
-    "thronefall": "1937600",
-    "jackbox 3": "434170",
-    "jackbox 2": "397460",
-    "hades": "1145360",
-    "hades 2": "1145350",
-    "balatro": "2379780",
-    "hd 2": "553850",
-    "helldivers 2": "553850",
-    "lethal company": "1966720",
-    "backpack hero": "1970580",
-    "cod: black ops 2": "202970",
-    "powerwash simulator": "1290000",
-    "a little to the left": "1629520",
-    "battlebit remastered": "671860",
-    "drg": "548430",
-    "deep rock galactic": "548430",
-    "soulstone survivors": "1517820",
-    "vampire survivors": "1794680",
-    "tabletop simulator": "286160",
-    "the stanley parable: ultra deluxe": "1703340",
-    "grim dawn": "219990",
-    "dorfromantik": "1455840",
-    "stacklands": "1948280",
-    "house flipper": "613100",
-    "lego star wars: the skywalker saga": "920210",
-    "forza 5": "1551360",
-    "valheim": "892970",
-    "wallpaper engine": "431960",
-    "among us": "945360",
-    "terraria": "105600",
-    "besiege": "346010",
-    "firewatch": "383870",
-    "the witcher 3: wild hunt": "292030",
-    "halo: reach": "1064220",
-    "rocket league": "252950",
-    "cities: skylines": "255710",
-    "ac odyssey": "812140",
-    "assassin's creed odyssey": "812140",
-    "borderlands 2": "49520",
-    "borderlands: the pre-sequel": "261640",
-    "fps aim trainer": "1007090",
-    "btd 6": "960090",
-    "pavlov": "555160",
-    "stand out": "748370",
-    "islands of nyne: battle royale": "728540",
-    "doom": "379720",
-    "far cry 5": "552520",
-    "ghost recon wildlands": "460930",
-    "pubg": "578080",
-    "playerunknown's battlegrounds": "578080",
-    "prey": "480490",
-    "r6 siege": "359550",
-    "rainbow six siege": "359550",
-    "rust": "252490",
-    "lawbreakers": "350280",
-    "the escapists": "298630",
-    "spore": "17390",
-    "gta 5": "271590",
-    "grand theft auto 5": "271590",
-    "cod: black ops 3": "311210",
-    "golf with your friends": "431240",
-    "crysis 2 maximum edition": "108800",
-    "btd 5": "306020",
-    "cod: world at war": "10090",
-    "shellshock live": "326460",
-    "peglin": "1296610",
-}
+import json
+import requests
+import os
 
-EPIC_GAME_DICT = {
-    "slime rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis",
-}
+# File paths for JSON data
+STEAM_GAMES_FILE = 'steam_games.json'
+EPIC_GAMES_FILE = 'epic_games.json'
+STEAM_ROGUELIKES_FILE = 'steam_roguelikes.json'
 
-STEAM_ROUGLIKES = {
-    "slay the spire": "646570",
-    "vampire survivors": "1794680",
-    "peglin": "1296610",
-    "hades": "1145360",
-    "hades 2": "1145350",
-}
+def fetch_steam_games(steam_api_key, steam_id):
+    url = f"http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={steam_api_key}&steamid={steam_id}&format=json&include_appinfo=1"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return {game['name'].lower(): str(game['appid']) for game in data['response']['games']}
+    else:
+        print(f"Failed to fetch Steam games. Status code: {response.status_code}")
+        return {}
+
+def load_json_data(file_path, default=None):
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            return json.load(f)
+    return default or {}
+
+def save_json_data(file_path, data):
+    with open(file_path, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def update_game_lists(steam_api_key, steam_id):
+    # Fetch Steam games
+    steam_games = fetch_steam_games(steam_api_key, steam_id)
+    
+    # Load existing data
+    existing_steam_games = load_json_data(STEAM_GAMES_FILE, {})
+    epic_games = load_json_data(EPIC_GAMES_FILE, {
+        "slime rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis",
+    })
+    steam_roguelikes = load_json_data(STEAM_ROGUELIKES_FILE, {
+        "slay the spire": "646570",
+        "vampire survivors": "1794680",
+        "peglin": "1296610",
+        "hades": "1145360",
+        "hades 2": "1145350",
+    })
+
+    # Update Steam games with newly fetched data
+    existing_steam_games.update(steam_games)
+
+    return existing_steam_games, epic_games, steam_roguelikes

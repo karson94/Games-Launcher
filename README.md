@@ -31,20 +31,15 @@ A versatile command-line tool to launch your favorite games from Steam and Epic 
 
 ## Configuration
 
-1. Open `game_dict.py` and add your games to the appropriate dictionaries:
+To use this game launcher, you need to set up your Steam API key and Steam ID. You have two options:
 
-   - For Steam games:
-     ```python
-     STEAM_GAME_DICT = {
-         "game nickname": "steam_app_id",
-         # Add more games...
-     }
-     ```
+1. Edit `config.py` directly with your Steam API key and Steam ID.
+2. Create a `personal_config.py` file with your Steam API key and Steam ID. This file will be ignored by git, keeping your personal information private.
 
    - For Epic Games:
      ```python
      EPIC_GAME_DICT = {
-         "game nickname": "Epic InternalName",
+         "game nickname": "epic_game_id",
          # Add more games...
      }
      ```
@@ -67,10 +62,12 @@ A versatile command-line tool to launch your favorite games from Steam and Epic 
 
    Example:
    ```python
-   EPIC_GAME_DICT = {
-       "Slime Rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis",
+   # This dictionary is now stored in epic_games.json
+   {
+       "Slime Rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis"
    }
    ```
+   The `epic_games.json` file will be automatically updated when you run the game launcher.
 
 4. After adding new games, save the `game_dict.py` file.
 
