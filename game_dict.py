@@ -1,5 +1,5 @@
 # Dictionary mapping game names and their acronyms to their Steam AppIDs
-STEAM_GAME_IDS = {
+STEAM_GAME_DICT = {
     "satisfactory": "526870",
     "sf": "526870",
     "slay the spire": "646570",

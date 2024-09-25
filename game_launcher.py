@@ -1,15 +1,15 @@
 import sys
 import random
 import os
-from game_dict import STEAM_GAME_IDS, STEAM_ROUGLIKES
+from game_dict import STEAM_GAME_DICT, STEAM_ROUGLIKES
 from difflib import get_close_matches
 
 def find_closest_match(game_name):
-    return get_close_matches(game_name.lower(), STEAM_GAME_IDS.keys(), n=2, cutoff=0.65)
+    return get_close_matches(game_name.lower(), STEAM_GAME_DICT.keys(), n=2, cutoff=0.65)
 
 def print_all_games():
     print("Available games:")
-    for game in sorted(STEAM_GAME_IDS.keys()):
+    for game in sorted(STEAM_GAME_DICT.keys()):
         print(f"- {game}")
 
 def launch_random_roguelike():
@@ -21,8 +21,8 @@ def launch_game(game_name):
     game_name = game_name.lower()
     if game_name == "roguelikes":
         launch_random_roguelike()
-    elif game_name in STEAM_GAME_IDS:
-        app_id = STEAM_GAME_IDS[game_name]
+    elif game_name in STEAM_GAME_DICT:
+        app_id = STEAM_GAME_DICT[game_name]
         print(f"Launching {game_name}...")
         os.system(f'start steam://rungameid/{app_id}')
     else:
