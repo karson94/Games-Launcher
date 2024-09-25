@@ -7,7 +7,8 @@ from game_dict import STEAM_GAME_DICT, STEAM_ROUGLIKES, EPIC_GAME_DICT
 from difflib import get_close_matches
 
 def find_closest_match(game_name):
-    return get_close_matches(game_name.lower(), STEAM_GAME_DICT.keys(), n=2, cutoff=0.65)
+    all_games = list(STEAM_GAME_DICT.keys()) + list(EPIC_GAME_DICT.keys())
+    return get_close_matches(game_name.lower(), all_games, n=2, cutoff=0.65)
 
 def print_all_games():
     print("Available games:")
@@ -16,7 +17,7 @@ def print_all_games():
 
 def launch_random_roguelike():
     roguelike = random.choice(list(STEAM_ROUGLIKES.keys()))
-    print(f"Launching random roguelike: {roguelike}")
+    print(f"Launching random roguelike: {roguelike.title()}")
     launch_game(roguelike)
 
 def launch_game(game_name):
@@ -25,11 +26,11 @@ def launch_game(game_name):
         launch_random_roguelike()
     elif game_name in STEAM_GAME_DICT:
         app_id = STEAM_GAME_DICT[game_name]
-        print(f"Launching {game_name} from Steam...")
+        print(f"Launching {game_name.title()} from Steam...")
         launch_steam_game(app_id)
     elif game_name in EPIC_GAME_DICT:
         app_name = EPIC_GAME_DICT[game_name]
-        print(f"Launching {game_name} from Epic Games...")
+        print(f"Launching {game_name.title()} from Epic Games...")
         launch_epic_game(app_name)
     else:
         closest_match = find_closest_match(game_name)
@@ -64,25 +65,10 @@ def launch_epic_game(app_name):
     else:
         print(f"Epic Games Launcher is not supported on {system}")
 
-def list_epic_games():
-    try:
-        result = subprocess.run(["powershell", "-Command", "& {Get-ItemProperty 'HKLM:\\SOFTWARE\\WOW6432Node\\Epic Games\\EpicGamesLauncher\\AppDataPath'}"], capture_output=True, text=True)
-        epic_path = result.stdout.strip()
-        
-        with open(f"{epic_path}\\Manifests\\*.item", "r") as f:
-            for line in f:
-                game_info = json.loads(line)
-                print(f"Game: {game_info['DisplayName']}, ID: {game_info['AppName']}")
-    except Exception as e:
-        print(f"Error listing Epic Games: {e}")
-
-# Call this function to see all installed Epic Games and their IDs
-list_epic_games()
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python game_launcher.py <game_name>")
         sys.exit(1)
 
-    game_name = " ".join(sys.argv[1:])  # Join all arguments as the game name
+    game_name = " ".join(sys.argv[1:]).lower()  # Join all arguments as the game name and convert to lowercase
     launch_game(game_name)

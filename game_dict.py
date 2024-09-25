@@ -78,7 +78,7 @@ STEAM_GAME_DICT = {
 EPIC_GAME_DICT = {
     "fortnite": "Fortnite",
     "rocket league": "Sugar",
-    "slime rancher": "SlimeRancher"  # Changed this line
+    "slime rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis",
 }
 
 STEAM_ROUGLIKES = {
