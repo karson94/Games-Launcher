@@ -1,19 +1,21 @@
 # Dictionary mapping game names and their acronyms to their Steam AppIDs
 STEAM_GAME_DICT = {
-    "satisfactory": "526870",
     "sf": "526870",
+    "satisfactory": "526870",
+    "sts": "646570",
     "slay the spire": "646570",
     "dungeons & degenerate gamblers": "2255420",
     "dicey dungeons": "861540",
     "factorio": "427520",
     "drg: survivor": "2349400",
-    "the jackbox party pack 7": "1211630",
+    "jackbox 7": "1211630",
     "thronefall": "1937600",
-    "the jackbox party pack 3": "434170",
-    "the jackbox party pack 2": "397460",
+    "jackbox 3": "434170",
+    "jackbox 2": "397460",
     "hades": "1145360",
     "hades 2": "1145350",
     "balatro": "2379780",
+    "hd 2": "553850",
     "helldivers 2": "553850",
     "lethal company": "1966720",
     "backpack hero": "1970580",
@@ -32,7 +34,7 @@ STEAM_GAME_DICT = {
     "stacklands": "1948280",
     "house flipper": "613100",
     "lego star wars: the skywalker saga": "920210",
-    "forza horizon 5": "1551360",
+    "forza 5": "1551360",
     "valheim": "892970",
     "wallpaper engine": "431960",
     "among us": "945360",
@@ -76,8 +78,6 @@ STEAM_GAME_DICT = {
 }
 
 EPIC_GAME_DICT = {
-    "fortnite": "Fortnite",
-    "rocket league": "Sugar",
     "slime rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis",
 }
 

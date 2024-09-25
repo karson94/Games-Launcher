@@ -29,41 +29,51 @@ def launch_game(game_name):
         print(f"Launching {game_name.title()} from Steam...")
         launch_steam_game(app_id)
     elif game_name in EPIC_GAME_DICT:
-        app_name = EPIC_GAME_DICT[game_name]
+        app_id = EPIC_GAME_DICT[game_name]
         print(f"Launching {game_name.title()} from Epic Games...")
-        launch_epic_game(app_name)
+        launch_epic_game(app_id)
     else:
         closest_match = find_closest_match(game_name)
         if closest_match:
             print(f"Game '{game_name}' not found. Did you mean '{closest_match[0]}'?")
             user_input = input("Press Enter to launch this game, or type 'n' to cancel: ").lower()
-            if user_input != 'n':
+            if user_input.lower()!= 'n':
                 launch_game(closest_match[0])
         else:
             print(f"Game '{game_name}' not found in the list of known games.")
             print_all_games()
 
-def launch_steam_game(app_id):
+def get_system_command():
     system = platform.system()
     if system == "Windows":
-        os.system(f'start steam://rungameid/{app_id}')
+        return "start"
     elif system == "Darwin":  # macOS
-        os.system(f'open steam://rungameid/{app_id}')
+        return "open"
     elif system == "Linux":
-        os.system(f'xdg-open steam://rungameid/{app_id}')
+        return "xdg-open"
     else:
-        print(f"Unsupported operating system: {system}")
+        print(f"{system} is an unsupported operating system")
+        return None
+
+def launch_steam_game(app_id):
+    command = get_system_command()
+    if command:
+        steam_url = f'steam://rungameid/{app_id}'
+        if command == "start":
+            subprocess.run([command, "", steam_url], shell=True)
+        else:
+            subprocess.run([command, steam_url])
 
 def launch_epic_game(app_name):
-    system = platform.system()
-    if system == "Windows":
+    command = get_system_command()
+    if command:
         epic_url = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
-        os.system(f'start "" "{epic_url}"')
-    elif system == "Darwin":  # macOS
-        epic_url = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
-        os.system(f'open "{epic_url}"')
+        if command == "start":
+            subprocess.run([command, "", epic_url], shell=True)
+        else:
+            subprocess.run([command, epic_url])
     else:
-        print(f"Epic Games Launcher is not supported on {system}")
+        print("Epic Games Launcher is not supported on this system")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
