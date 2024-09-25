@@ -1,14 +1,14 @@
 # Games Launcher
 
-A versatile command-line tool to launch your favorite games from Steam and Epic Games Store with ease.
+A command-line tool for launching Steam and Epic Games efficiently.
 
 ## Features
 
 - Launch Steam and Epic Games directly from the command line
-- Fuzzy matching for game names
+- Intelligent game name matching, tolerant of typos and partial inputs
 - Random roguelike launcher
 - Cross-platform support (Windows, macOS, Linux)
-- Automatic game suggestion for misspelled names
+- Smart game suggestions for misspelled names
 
 ## Prerequisites
 
@@ -24,52 +24,87 @@ A versatile command-line tool to launch your favorite games from Steam and Epic 
    cd Games-Launcher
    ```
 
-2. Install required dependencies:
+2. Install dependencies:
    ```
    pip install -r requirements.txt
    ```
 
 ## Configuration
 
-To use this game launcher, you need to set up your Steam API key and Steam ID. You have two options:
+### Steam Setup
 
-1. Edit `config.py` directly with your Steam API key and Steam ID.
-2. Create a `personal_config.py` file with your Steam API key and Steam ID. This file will be ignored by git, keeping your personal information private.
+1. Create a `personal_config.py` file in the GamesLauncher directory:
 
-   - For Epic Games:
-     ```python
-     EPIC_GAME_DICT = {
-         "game nickname": "epic_game_id",
-         # Add more games...
-     }
-     ```
-
-2. (Optional) Add roguelike games to the `STEAM_ROUGLIKES` dictionary in `game_dict.py`.
-
-3. To get the Epic Games game ID:
-   - Open the Epic Games Launcher
-   - Go to your Library
-   - Find the game you want to add
-   - Click on the three dots (...) next to the game title
-   - Select "Manage"
-   - Select "Create Desktop Shortcut"
-   - Right-click on the newly created shortcut and select "Properties"
-   - In the "Target" field, you'll see a URL like this:
-      ```
-      com.epicgames.launcher://apps/[long_string_of_characters]?action=launch&silent=true
-      ```
-   - The `[long_string_of_characters]` is the game ID you need to use in the `EPIC_GAME_DICT`
-
-   Example:
    ```python
-   # This dictionary is now stored in epic_games.json
+   STEAM_API_KEY = "your_steam_api_key_here"
+   STEAM_ID = "your_steam_id_here"
+   ```
+
+   To obtain your Steam API key:
+   - Visit https://steamcommunity.com/dev/apikey
+   - Log in and agree to the Steam Web API Terms of Use
+   - Enter a domain name (use 'localhost' for personal use)
+   - Your API key will be generated
+
+   To find your Steam ID:
+   - Go to https://steamid.io/
+   - Enter your Steam profile URL
+   - Copy the "steamID64" value
+
+2. Alternatively, you can edit `config.py` directly, but be cautious about sharing this file.
+
+### Epic Games Configuration
+
+1. Open or create `epic_games.json` and add your games:
+
+   ```json
    {
-       "Slime Rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis"
+     "game name": "epic_game_id",
+     "another game": "another_epic_game_id"
    }
    ```
-   The `epic_games.json` file will be automatically updated when you run the game launcher.
 
-4. After adding new games, save the `game_dict.py` file.
+2. To find the Epic Games ID:
+   - Open Epic Games Launcher
+   - Navigate to your Library
+   - Select the game
+   - Click the three dots (...) and choose "Manage"
+   - Select "Create Desktop Shortcut"
+   - Right-click the new shortcut and select "Properties"
+   - In the "Target" field, locate the ID in the URL:
+     ```
+     com.epicgames.launcher://apps/[epic_game_id]?action=launch&silent=true
+     ```
+
+   Example:
+   ```json
+   {
+     "Slime Rancher": "corydalis%3A1e38b618d106430db94b474abbfecc16%3ACorydalis"
+   }
+   ```
+
+### Steam Games Configuration
+
+1. To find a Steam App ID:
+   - Go to the game's Steam store page
+   - The App ID is the number after `/app/` in the URL
+   - Example: For "Slay the Spire", the URL is `https://store.steampowered.com/app/646570/Slay_the_Spire/`, so the App ID is `646570`
+
+2. Open `steam_roguelikes.json` or `steam_games.json` and add games:
+   ```json
+   {
+     "game name": "steam_app_id",
+     "another game": "another_steam_app_id"
+   }
+   ```
+
+   Example:
+   ```json
+   {
+     "slay the spire": "646570",
+     "hades": "1145360"
+   }
+   ```
 
 ## Usage
 
@@ -80,16 +115,14 @@ Run the script with a game name as an argument:
 python game_launcher.py "Slay The Spire"
 ```
 
-### PowerShell Integration
-
-To use the game launcher directly from PowerShell:
+### PowerShell Integration (Recommended for Windows users)
 
 1. Open your PowerShell profile:
    ```powershell
    notepad $PROFILE
    ```
 
-2. Add the following function to the file:
+2. Add this function:
    ```powershell
    function game {
        param($gameName)
@@ -97,26 +130,41 @@ To use the game launcher directly from PowerShell:
    }
    ```
 
-3. Replace `C:\path\to\Games-Launcher` with the actual path to the script on your system.
+3. Replace `C:\path\to\Games-Launcher` with the actual path to the script.
 
-4. Save the file and restart PowerShell.
+4. Save and restart PowerShell.
 
-Now you can launch games by typing:
+Now you can launch games with:
 ```
 game Slay The Spire
 ```
 
+### Key Features
+
+The launcher offers flexible input handling:
+
+- Partial names are accepted: `game slay` launches "Slay the Spire"
+- Typo-tolerant: `game hads` correctly identifies "Hades"
+- Recognizes common acronyms: `game gtav` for "Grand Theft Auto V"
+- Case-insensitive: `game GRAND THEFT AUTO V` works as expected
+- Handles multi-word titles without quotes: `game slay the spire`
+
+Additional feature: Use `game random` to launch a random roguelike.
+
+Note: The launcher will always confirm before launching if there's any ambiguity.
+
 ## Troubleshooting
 
-- Ensure Steam and Epic Games Launcher are installed and properly configured.
-- Check that the game paths in `game_launcher.py` match your system's installation paths.
-- For Epic Games, verify that the internal game names in `EPIC_GAME_DICT` are correct.
+If you encounter issues:
+- Verify that Steam and Epic Games Launcher are properly installed
+- Ensure game paths in `game_launcher.py` match your installation directories
+- For Epic Games, confirm that game names in `epic_games.json` are accurate
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Please submit a pull request with your proposed changes.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
