@@ -2,9 +2,7 @@
 personal_config.py
 
 # Ignore personal game json files
-epic_games.json
-steam_games.json
-steam_roguelikes.json
+*.json
 
 # Ignore Python bytecode files
 __pycache__/

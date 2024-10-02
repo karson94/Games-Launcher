@@ -1,58 +1,62 @@
-import sys
-import random
-import os
-import platform
-import subprocess
+import sys, random, os, platform, subprocess, requests, json, game_dict
 from difflib import get_close_matches
-import requests
-import json
-import game_dict
 from config import STEAM_API_KEY, STEAM_ID
 
-# Get the appropriate system command based on the operating system
-def get_system_command():
+# Global variables
+SYSTEM_COMMAND = None
+
+# Initialize global variables
+def initialize_globals():
+    global SYSTEM_COMMAND
+    
+    # Set system command
     system = platform.system()
     if system == "Windows":
-        return "start"
+        SYSTEM_COMMAND = "start"
     elif system == "Darwin":  # macOS
-        return "open"
+        SYSTEM_COMMAND = "open"
     elif system == "Linux":
-        return "xdg-open"
+        SYSTEM_COMMAND = "xdg-open"
     else:
         print(f"{system} is an unsupported operating system")
-        return None
+        sys.exit(1)
 
 # Launch a Steam game using the appropriate system command
 def launch_steam_game(app_id):
-    command = get_system_command()
-    if command:
-        steam_url = f'steam://rungameid/{app_id}'
-        if command == "start":
-            subprocess.run([command, "", steam_url], shell=True)
-        else:
-            subprocess.run([command, steam_url])
+    if not SYSTEM_COMMAND:
+        return
+
+    steam_url = f'steam://rungameid/{app_id}'
+    launch_options = game_dict.load_json_data(game_dict.LAUNCH_OPTIONS_FILE, {})
+    launch_option = launch_options.get(app_id, '')
+    
+    if launch_option:
+        steam_url += f'//{launch_option}'
+        print(f"Launching game with options: {launch_option}")
+    else:
+        print(f"Launching game")
+    
+    if SYSTEM_COMMAND == "start":
+        subprocess.run([SYSTEM_COMMAND, "", steam_url], shell=True)
+    else:
+        subprocess.run([SYSTEM_COMMAND, steam_url])
 
 # Launch an Epic game using the appropriate system command
 def launch_epic_game(app_name):
-    command = get_system_command()
-    if command:
-        epic_url = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
-        if command == "start":
-            subprocess.run([command, "", epic_url], shell=True)
-        else:
-            subprocess.run([command, epic_url])
-    else:
-        print("Epic Games Launcher is not supported on this system")
+    if not SYSTEM_COMMAND:
+        return
 
-# Print all available games
-def print_all_games():
-    print("Available games:")
-    for game in sorted(STEAM_GAME_DICT.keys()):
-        print(f"- {game}")
+    epic_url = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
+    if SYSTEM_COMMAND == "start":
+        subprocess.run([SYSTEM_COMMAND, "", epic_url], shell=True)
+    else:
+        subprocess.run([SYSTEM_COMMAND, epic_url])
 
 # Find the closest matching game name from the available games
 def find_closest_match(game_name):
-    all_games = list(STEAM_GAME_DICT.keys()) + list(EPIC_GAME_DICT.keys())
+    steam_games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
+    epic_games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
+    all_games = list(steam_games.keys()) + list(epic_games.keys())
     
     # Common transformations
     transformations = [
@@ -150,19 +154,22 @@ def find_and_confirm_game(game_name):
 
 # Launch game by platform
 def launch_game_by_platform(game_name):
-    if game_name in STEAM_GAME_DICT:
-        app_id = STEAM_GAME_DICT[game_name]
+    steam_games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
+    epic_games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
+
+    if game_name in steam_games:
+        app_id = steam_games[game_name]
         print(f"Launching {game_name.title()} from Steam...")
         launch_steam_game(app_id)
-    elif game_name in EPIC_GAME_DICT:
-        app_id = EPIC_GAME_DICT[game_name]
+    elif game_name in epic_games:
+        app_id = epic_games[game_name]
         print(f"Launching {game_name.title()} from Epic Games...")
         launch_epic_game(app_id)
     else:
         app_id = fetch_steam_game(game_name)
         if app_id:
-            STEAM_GAME_DICT[game_name] = app_id
-            save_json_data(STEAM_GAMES_FILE, STEAM_GAME_DICT)
+            steam_games[game_name] = app_id
+            game_dict.save_json_data(game_dict.STEAM_GAMES_FILE, steam_games)
             print(f"Launching new Steam game: {game_name.title()}...")
             launch_steam_game(app_id)
         else:
@@ -177,33 +184,49 @@ def launch_game(game_name):
 
 # Launch a random roguelike game
 def launch_random_roguelike():
-    roguelike = random.choice(list(STEAM_ROUGLIKES.keys()))
+    steam_roguelikes = game_dict.load_json_data(game_dict.STEAM_ROGUELIKES_FILE, {})
+    roguelike = random.choice(list(steam_roguelikes.keys()))
     print(f"Launching random roguelike: {roguelike.title()}")
     launch_game(roguelike)
 
-# File paths for JSON data
-STEAM_GAMES_FILE = 'steam_games.json'
-EPIC_GAMES_FILE = 'epic_games.json'
-STEAM_ROGUELIKES_FILE = 'steam_roguelikes.json'
+# New function to list games from a specific library
+def list_games(library):
+    if library.lower() == 'steam':
+        games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
+    elif library.lower() == 'epic':
+        games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
+    else:
+        print(f"Unknown library: {library}. Please use 'steam' or 'epic'.")
+        return
+
+    if not games:
+        print(f"No games found in the {library.capitalize()} library.")
+    else:
+        print(f"Games in your {library.capitalize()} library:")
+        for game in sorted(games.keys()):
+            print(f"- {game.title()}")
 
 # Add this check:
 if not STEAM_API_KEY or not STEAM_ID:
     print("Error: STEAM_API_KEY or STEAM_ID not set. Please set them in config.py or personal_config.py")
     sys.exit(1)
 
-# Load game dictionaries
-STEAM_GAME_DICT, EPIC_GAME_DICT, STEAM_ROGUELIKES = game_dict.update_game_lists(STEAM_API_KEY, STEAM_ID)
-
-# Save updated game dictionaries
-game_dict.save_json_data(STEAM_GAMES_FILE, STEAM_GAME_DICT)
-game_dict.save_json_data(EPIC_GAMES_FILE, EPIC_GAME_DICT)
-game_dict.save_json_data(STEAM_ROGUELIKES_FILE, STEAM_ROGUELIKES)
-
 # Main execution block
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python game_launcher.py <game_name>")
+    initialize_globals()
+    
+    if not STEAM_API_KEY or not STEAM_ID:
+        print("Error: STEAM_API_KEY or STEAM_ID not set. Please set them in config.py or personal_config.py")
         sys.exit(1)
 
-    game_name = " ".join(sys.argv[1:])  # Join all arguments as the game name
-    launch_game(game_name)
+    if len(sys.argv) < 2:
+        print("Usage: python game_launcher.py <game_name>")
+        print("       python game_launcher.py list <library_name>")
+        sys.exit(1)
+
+    if sys.argv[1].lower() in ['list steam', 'list epic']:
+        library = sys.argv[1][5:]
+        list_games(library)
+    else:
+        game_name = " ".join(sys.argv[1:])  # Join all arguments as the game name
+        launch_game(game_name)

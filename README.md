@@ -55,7 +55,7 @@ A command-line tool for launching Steam and Epic Games efficiently.
 
 ### Epic Games Configuration
 
-1. Open or create `epic_games.json` and add your games:
+1. Open or create `data/lists/epic_games.json` in the GamesLauncher folder and add your games:
 
    ```json
    {
@@ -90,7 +90,7 @@ A command-line tool for launching Steam and Epic Games efficiently.
    - The App ID is the number after `/app/` in the URL
    - Example: For "Slay the Spire", the URL is `https://store.steampowered.com/app/646570/Slay_the_Spire/`, so the App ID is `646570`
 
-2. Open `steam_roguelikes.json` or `steam_games.json` and add games:
+2. Open `data/lists/steam_roguelikes.json` or `data/lists/steam_games.json` in the GamesLauncher folder and add games:
    ```json
    {
      "game name": "steam_app_id",
@@ -105,6 +105,35 @@ A command-line tool for launching Steam and Epic Games efficiently.
      "hades": "1145360"
    }
    ```
+
+### Launch Options Configuration
+
+1. Open `data/launch_options.json` in the GamesLauncher folder to add special launch options for games:
+
+   ```json
+   {
+     "game name": "launch options",
+     "another game": "other launch options",
+     "special game": {
+       "alternate_app_id": "alternate_steam_app_id",
+       "name": "Alternate Game Name"
+     }
+   }
+   ```
+
+   Example:
+   ```json
+   {
+     "playerunknown's battlegrounds": "-KoreanRating",
+     "pubg": "-KoreanRating",
+     "slay the spire": {
+       "alternate_app_id": "1605060",
+       "name": "Mod the Spire"
+     }
+   }
+   ```
+
+   These launch options will be applied when starting the game through the launcher. For special cases like "Slay the Spire", an alternate Steam app ID can be specified to launch a different executable (e.g., "Mod the Spire").
 
 ## Usage
 
@@ -158,7 +187,7 @@ Note: The launcher will always confirm before launching if there's any ambiguity
 If you encounter issues:
 - Verify that Steam and Epic Games Launcher are properly installed
 - Ensure game paths in `game_launcher.py` match your installation directories
-- For Epic Games, confirm that game names in `epic_games.json` are accurate
+- For Epic Games, confirm that game names in `data/lists/epic_games.json` are accurate
 
 ## Contributing
 
