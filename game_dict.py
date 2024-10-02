@@ -1,6 +1,4 @@
-import json
-import requests
-import os
+import json, requests, os
 
 # Create the directory structure if it doesn't exist
 data_dir = os.path.join(os.path.dirname(__file__), 'data', 'lists')

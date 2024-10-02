@@ -24,8 +24,8 @@ A sophisticated command-line tool for launching Steam and Epic Games efficiently
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/GamesLauncher.git
-   cd GamesLauncher
+   git clone https://github.com/[yourusername]/Games-Launcher.git
+   cd Games-Launcher
    ```
 
 2. Install dependencies:
