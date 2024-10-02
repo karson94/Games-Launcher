@@ -30,26 +30,55 @@ def initialize_globals():
         print("Error: Unable to determine system command.")
         sys.exit(1)
 
-# Launch functions
-def launch_steam_game(app_id, launch_option=''):
+# Game finding and launching functions
+def start_game_launch(game_name):
     """
-    Launch a Steam game using the appropriate system command.
+    Start the game launch process by finding and confirming the game, then sending it to the appropriate platform.
     
-    :param app_id: The Steam App ID of the game to launch
-    :param launch_option: Optional launch options for the game
+    :param game_name: The name of the game to launch
     """
-    steam_url = f'steam://rungameid/{app_id}'
-    if launch_option:
-        steam_url += f'//{launch_option}'
-        print(f"Launching game with options: {launch_option}")
-    else:
-        print(f"Launching game")
-    
-    if SYSTEM_COMMAND == "start":
-        subprocess.run([SYSTEM_COMMAND, "", steam_url], shell=True)
-    else:
-        subprocess.run([SYSTEM_COMMAND, steam_url])
+    confirmed_game = utils.find_and_confirm_game(game_name)
+    if confirmed_game:
+        send_to_platform(confirmed_game)
 
+def send_to_platform(game_name):
+    """
+    Determine the platform (Steam or Epic) for the game and launch it accordingly.
+    
+    :param game_name: The name of the game to launch
+    """
+    steam_games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
+    epic_games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
+
+    if game_name in steam_games:
+        app_id = steam_games[game_name]
+        print(f"Launching {game_name.title()} from Steam...")
+        handle_steam_game(app_id)
+    elif game_name in epic_games:
+        app_id = epic_games[game_name]
+        print(f"Launching {game_name.title()} from Epic Games...")
+        launch_epic_game(app_id)
+    else:
+        app_id = game_dict.fetch_steam_game(game_name)
+        if app_id:
+            steam_games[game_name] = app_id
+            game_dict.save_json_data(game_dict.STEAM_GAMES_FILE, steam_games)
+            print(f"Launching new Steam game: {game_name.title()}...")
+            handle_steam_game(app_id)
+        else:
+            print(f"Game '{game_name}' not found in the list of known games.")
+            list_games("all")
+
+def find_random_roguelike():
+    """
+    Launch a random roguelike game from the list of Steam roguelikes.
+    """
+    steam_roguelikes = game_dict.load_json_data(game_dict.STEAM_ROGUELIKES_FILE, {})
+    roguelike = random.choice(list(steam_roguelikes.keys()))
+    print(f"Launching random roguelike: {roguelike.title()}")
+    send_to_platform(roguelike)
+
+# Launch functions
 def handle_steam_game(app_id):
     """
     Handle the launching of a Steam game, with special handling for Slay the Spire.
@@ -107,58 +136,32 @@ def launch_epic_game(app_name):
         return
 
     epic_url = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
+    launch_process(epic_url)
+
+def launch_steam_game(app_id, launch_option=''):
+    """
+    Launch a Steam game using the appropriate system command.
+    
+    :param app_id: The Steam App ID of the game to launch
+    :param launch_option: Optional launch options for the game
+    """
+    steam_url = f'steam://rungameid/{app_id}'
+    if launch_option:
+        steam_url += f'//{launch_option}'
+        print(f"Launching game with options: {launch_option}")
+    
+    launch_process(steam_url)
+
+def launch_process(game_url):
+    """
+    Launch a game using the appropriate system command.
+    
+    :param game_url: The URL of the game to launch
+    """
     if SYSTEM_COMMAND == "start":
-        subprocess.run([SYSTEM_COMMAND, "", epic_url], shell=True)
+        subprocess.run([SYSTEM_COMMAND, "", game_url], shell=True)
     else:
-        subprocess.run([SYSTEM_COMMAND, epic_url])
-
-# Game finding and launching functions
-def send_to_platform(game_name):
-    """
-    Determine the platform (Steam or Epic) for the game and launch it accordingly.
-    
-    :param game_name: The name of the game to launch
-    """
-    steam_games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
-    epic_games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
-
-    if game_name in steam_games:
-        app_id = steam_games[game_name]
-        print(f"Launching {game_name.title()} from Steam...")
-        handle_steam_game(app_id)
-    elif game_name in epic_games:
-        app_id = epic_games[game_name]
-        print(f"Launching {game_name.title()} from Epic Games...")
-        launch_epic_game(app_id)
-    else:
-        app_id = fetch_steam_game(game_name)
-        if app_id:
-            steam_games[game_name] = app_id
-            game_dict.save_json_data(game_dict.STEAM_GAMES_FILE, steam_games)
-            print(f"Launching new Steam game: {game_name.title()}...")
-            handle_steam_game(app_id)
-        else:
-            print(f"Game '{game_name}' not found in the list of known games.")
-            print_all_games()
-
-def start_game_launch(game_name):
-    """
-    Start the game launch process by finding and confirming the game, then sending it to the appropriate platform.
-    
-    :param game_name: The name of the game to launch
-    """
-    confirmed_game = utils.find_and_confirm_game(game_name)
-    if confirmed_game:
-        send_to_platform(confirmed_game)
-
-def launch_random_roguelike():
-    """
-    Launch a random roguelike game from the list of Steam roguelikes.
-    """
-    steam_roguelikes = game_dict.load_json_data(game_dict.STEAM_ROGUELIKES_FILE, {})
-    roguelike = random.choice(list(steam_roguelikes.keys()))
-    print(f"Launching random roguelike: {roguelike.title()}")
-    send_to_platform(roguelike)
+        subprocess.run([SYSTEM_COMMAND, game_url])
 
 # Utility functions
 def list_games(library):
@@ -172,17 +175,16 @@ def list_games(library):
     elif library.lower() == 'epic':
         games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
     elif library.lower() == 'all':
-        steam_games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
-        epic_games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
-        games = {**steam_games, **epic_games}
+        games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
+        games.update(game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {}))
     else:
         print(f"Unknown library: {library}. Please use 'steam', 'epic', or 'all'.")
         return
 
     if not games:
-        print(f"No games found in the {library.capitalize()} library.")
+        print(f"No games found in the {library.title()} library.")
     else:
-        print(f"Games in your {library.capitalize()} library:")
+        print(f"Games in your {library.title()} library:")
         for game in sorted(games.keys()):
             print(f"- {game.title()}")
 
@@ -199,9 +201,11 @@ if __name__ == "__main__":
         print("       python game_launcher.py list <library_name>")
         sys.exit(1)
 
-    if sys.argv[1].lower() in ['list steam', 'list epic', 'list all']:
-        library = sys.argv[1][5:]
+    if sys.argv[1].lower() == 'list':
+        library = sys.argv[2].lower()
         list_games(library)
+    elif sys.argv[1].lower() == 'random':
+        find_random_roguelike()
     else:
         game_name = " ".join(sys.argv[1:])  # Join all arguments as the game name
         start_game_launch(game_name)
