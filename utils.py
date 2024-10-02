@@ -1,16 +1,16 @@
-import sys
-import random
-import os
-import platform
-import subprocess
+import os, sys, platform, subprocess, winreg 
 from difflib import get_close_matches
-import requests
-import json
-import game_dict
 from config import STEAM_API_KEY, STEAM_ID
+import game_dict
 
-# Get the appropriate system command based on the operating system
+# System-related functions
+
 def get_system_command():
+    """
+    Determine the appropriate system command to open applications based on the operating system.
+    
+    :return: The system command as a string ('start' for Windows, 'open' for macOS, 'xdg-open' for Linux)
+    """
     system = platform.system()
     if system == "Windows":
         return "start"
@@ -20,39 +20,68 @@ def get_system_command():
         return "xdg-open"
     else:
         print(f"{system} is an unsupported operating system")
-        return None
+        sys.exit(1)
 
-# Launch a Steam game using the appropriate system command
-def launch_steam_game(app_id):
-    command = get_system_command()
-    if command:
-        steam_url = f'steam://rungameid/{app_id}'
-        if command == "start":
-            subprocess.run([command, "", steam_url], shell=True)
-        else:
-            subprocess.run([command, steam_url])
-
-# Launch an Epic game using the appropriate system command
-def launch_epic_game(app_name):
-    command = get_system_command()
-    if command:
-        epic_url = f"com.epicgames.launcher://apps/{app_name}?action=launch&silent=true"
-        if command == "start":
-            subprocess.run([command, "", epic_url], shell=True)
-        else:
-            subprocess.run([command, epic_url])
+def get_steam_path():
+    """
+    Get the default Steam installation path based on the operating system.
+    
+    :return: The default Steam installation path as a string
+    :raises OSError: If the operating system is not supported
+    """
+    if platform.system() == "Windows":
+        return "C:\\Program Files (x86)\\Steam"
+    elif platform.system() == "Darwin":  # macOS
+        return "~/Library/Application Support/Steam"
+    elif platform.system() == "Linux":
+        return "~/.local/share/Steam"
     else:
-        print("Epic Games Launcher is not supported on this system")
+        raise OSError("Unsupported operating system")
 
-# Print all available games
-def print_all_games():
-    print("Available games:")
-    for game in sorted(STEAM_GAME_DICT.keys()):
-        print(f"- {game}")
+def find_java_path():
+    """
+    Find the Java executable path on Windows systems.
+    
+    :return: The path to the Java executable if found, None otherwise
+    """
+    try:
+        # Try to get Java path from Windows registry
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\JavaSoft\Java Runtime Environment")
+        version, _ = winreg.QueryValueEx(key, "CurrentVersion")
+        key = winreg.OpenKey(key, version)
+        path, _ = winreg.QueryValueEx(key, "JavaHome")
+        java_exe = os.path.join(path, "bin", "java.exe")
+        if os.path.exists(java_exe):
+            return java_exe
+    except WindowsError:
+        pass
 
-# Find the closest matching game name from the available games
+    # If registry method fails, try common installation directories
+    common_paths = [
+        r"C:\Program Files\Java",
+        r"C:\Program Files (x86)\Java",
+        os.environ.get("JAVA_HOME", "")
+    ]
+
+    for path in common_paths:
+        for root, dirs, files in os.walk(path):
+            if "java.exe" in files:
+                return os.path.join(root, "java.exe")
+
+    return None
+
+# Game-related functions
+
 def find_closest_match(game_name):
-    all_games = list(STEAM_GAME_DICT.keys()) + list(EPIC_GAME_DICT.keys())
+    """
+    Find the closest matching game name from the available games.
+    
+    :param game_name: The input game name to match
+    :return: A list of matching game names
+    """
+    steam_games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
+    epic_games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
+    all_games = list(steam_games.keys()) + list(epic_games.keys())
     
     # Common transformations
     transformations = [
@@ -106,18 +135,30 @@ def find_closest_match(game_name):
     # If no matches found, use get_close_matches for fuzzy matching
     return get_close_matches(game_name.lower(), all_games, n=3, cutoff=0.6)
 
-# Confirm game choice
 def confirm_game_choice(suggested_game, original_input):
+    """
+    Confirm the game choice with the user if the suggested game differs from the original input.
+    
+    :param suggested_game: The suggested game name
+    :param original_input: The original input from the user
+    :return: True if the user confirms, False otherwise
+    """
     if suggested_game.lower() != original_input:
-        confirm = input(f"Did you mean '{suggested_game}'? (y/n): ").lower()
+        confirm = input(f"Did you mean '{suggested_game.title()}?' (y/n): ").lower()
         return confirm not in ['n', 'no', 'm', 'b', 'h', 'j']
     return True
 
-# Handle multiple matches
 def handle_multiple_matches(matches, original_input):
+    """
+    Handle multiple game matches by presenting options to the user.
+    
+    :param matches: A list of matching game names
+    :param original_input: The original input from the user
+    :return: The selected game name or None if cancelled
+    """
     print(f"Multiple matches found for '{original_input}':")
     for i, match in enumerate(matches, 1):
-        print(f"{i}. {match}")
+        print(f"{i}. {match.title()}")
     choice = input("Enter the number of the game you want to launch (or 'c' to cancel): ")
     if choice.lower() == 'c':
         print("Launch cancelled.")
@@ -128,8 +169,13 @@ def handle_multiple_matches(matches, original_input):
         print("Invalid choice. Cancelling launch.")
         return None
 
-# Find and confirm game
 def find_and_confirm_game(game_name):
+    """
+    Find the closest matching game and confirm the choice with the user.
+    
+    :param game_name: The input game name
+    :return: The confirmed game name or None if not found or cancelled
+    """
     original_input = game_name.lower()
     matches = find_closest_match(original_input)
     
@@ -147,63 +193,3 @@ def find_and_confirm_game(game_name):
         return None
     
     return game_name
-
-# Launch game by platform
-def launch_game_by_platform(game_name):
-    if game_name in STEAM_GAME_DICT:
-        app_id = STEAM_GAME_DICT[game_name]
-        print(f"Launching {game_name.title()} from Steam...")
-        launch_steam_game(app_id)
-    elif game_name in EPIC_GAME_DICT:
-        app_id = EPIC_GAME_DICT[game_name]
-        print(f"Launching {game_name.title()} from Epic Games...")
-        launch_epic_game(app_id)
-    else:
-        app_id = fetch_steam_game(game_name)
-        if app_id:
-            STEAM_GAME_DICT[game_name] = app_id
-            save_json_data(STEAM_GAMES_FILE, STEAM_GAME_DICT)
-            print(f"Launching new Steam game: {game_name.title()}...")
-            launch_steam_game(app_id)
-        else:
-            print(f"Game '{game_name}' not found in the list of known games.")
-            print_all_games()
-
-# Main function to launch a game
-def launch_game(game_name):
-    confirmed_game = find_and_confirm_game(game_name)
-    if confirmed_game:
-        launch_game_by_platform(confirmed_game)
-
-# Launch a random roguelike game
-def launch_random_roguelike():
-    roguelike = random.choice(list(STEAM_ROUGLIKES.keys()))
-    print(f"Launching random roguelike: {roguelike.title()}")
-    launch_game(roguelike)
-
-# File paths for JSON data
-STEAM_GAMES_FILE = 'steam_games.json'
-EPIC_GAMES_FILE = 'epic_games.json'
-STEAM_ROGUELIKES_FILE = 'steam_roguelikes.json'
-
-# Add this check:
-if not STEAM_API_KEY or not STEAM_ID:
-    print("Error: STEAM_API_KEY or STEAM_ID not set. Please set them in config.py or personal_config.py")
-    sys.exit(1)
-
-# Load game dictionaries
-STEAM_GAME_DICT, EPIC_GAME_DICT, STEAM_ROGUELIKES = game_dict.update_game_lists(STEAM_API_KEY, STEAM_ID)
-
-# Save updated game dictionaries
-game_dict.save_json_data(STEAM_GAMES_FILE, STEAM_GAME_DICT)
-game_dict.save_json_data(EPIC_GAMES_FILE, EPIC_GAME_DICT)
-game_dict.save_json_data(STEAM_ROGUELIKES_FILE, STEAM_ROGUELIKES)
-
-# Main execution block
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python game_launcher.py <game_name>")
-        sys.exit(1)
-
-    game_name = " ".join(sys.argv[1:])  # Join all arguments as the game name
-    launch_game(game_name)
