@@ -1,9 +1,12 @@
-import sys, random, os, platform, subprocess, requests, json, game_dict
+import sys, random, os, platform, subprocess, requests, json
 from difflib import get_close_matches
 from config import STEAM_API_KEY, STEAM_ID
+import game_dict
+import shutil, winreg
 
 # Global variables
 SYSTEM_COMMAND = None
+STEAM_PATH = None
 
 # Initialize global variables
 def initialize_globals():
@@ -21,15 +24,82 @@ def initialize_globals():
         print(f"{system} is an unsupported operating system")
         sys.exit(1)
 
+def find_java_path():
+    try:
+        # Try to get Java path from Windows registry
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\JavaSoft\Java Runtime Environment")
+        version, _ = winreg.QueryValueEx(key, "CurrentVersion")
+        key = winreg.OpenKey(key, version)
+        path, _ = winreg.QueryValueEx(key, "JavaHome")
+        java_exe = os.path.join(path, "bin", "java.exe")
+        if os.path.exists(java_exe):
+            return java_exe
+    except WindowsError:
+        pass
+
+    # If registry method fails, try common installation directories
+    common_paths = [
+        r"C:\Program Files\Java",
+        r"C:\Program Files (x86)\Java",
+        os.environ.get("JAVA_HOME", "")
+    ]
+
+    for path in common_paths:
+        for root, dirs, files in os.walk(path):
+            if "java.exe" in files:
+                return os.path.join(root, "java.exe")
+
+    return None
+
 # Launch a Steam game using the appropriate system command
 def launch_steam_game(app_id):
     if not SYSTEM_COMMAND:
         return
 
-    steam_url = f'steam://rungameid/{app_id}'
     launch_options = game_dict.load_json_data(game_dict.LAUNCH_OPTIONS_FILE, {})
     launch_option = launch_options.get(app_id, '')
-    
+
+    if app_id == '646570':  # Slay the Spire's Steam App ID
+        steam_path = get_steam_path()
+        sts_path = os.path.join(steam_path, 'steamapps', 'common', 'SlayTheSpire')
+        mts_launcher = os.path.join(sts_path, 'mts-launcher.jar')
+        
+        if os.path.exists(mts_launcher):
+            print("Launching Slay the Spire with Mod the Spire...")
+            java_path = find_java_path()
+            if java_path:
+                print(f"Java found at: {java_path}")
+                try:
+                    result = subprocess.run([java_path, '-version'], capture_output=True, text=True)
+                    print(f"Java version: {result.stderr.strip()}")  # Java version is typically printed to stderr
+                    
+                    print(f"Attempting to run: {java_path} -jar {mts_launcher}")
+                    
+                    # Change the working directory to the Slay the Spire folder
+                    original_dir = os.getcwd()
+                    os.chdir(sts_path)
+                    
+                    subprocess.run([java_path, '-jar', 'mts-launcher.jar'], check=True)
+                    
+                    # Change back to the original directory
+                    os.chdir(original_dir)
+                except subprocess.CalledProcessError as e:
+                    print(f"Error occurred while launching Mod the Spire: {e}")
+                    print("Launching Slay the Spire normally...")
+                    launch_steam_url(app_id)
+            else:
+                print("Java not found. Please make sure Java is installed and added to your PATH.")
+                print("Launching Slay the Spire normally...")
+                launch_steam_url(app_id)
+        else:
+            print(f"Mod the Spire launcher not found at: {mts_launcher}")
+            print("Launching Slay the Spire normally...")
+            launch_steam_url(app_id)
+    else:
+        launch_steam_url(app_id, launch_option)
+
+def launch_steam_url(app_id, launch_option=''):
+    steam_url = f'steam://rungameid/{app_id}'
     if launch_option:
         steam_url += f'//{launch_option}'
         print(f"Launching game with options: {launch_option}")
@@ -40,6 +110,23 @@ def launch_steam_game(app_id):
         subprocess.run([SYSTEM_COMMAND, "", steam_url], shell=True)
     else:
         subprocess.run([SYSTEM_COMMAND, steam_url])
+
+def get_steam_path():
+    global STEAM_PATH
+    
+    if STEAM_PATH is None:
+        # This function should return the path to the Steam installation
+        # You might need to adjust this based on the user's system
+        if platform.system() == "Windows":
+            STEAM_PATH = "C:\\Program Files (x86)\\Steam"
+        elif platform.system() == "Darwin":  # macOS
+            STEAM_PATH = "~/Library/Application Support/Steam"
+        elif platform.system() == "Linux":
+            STEAM_PATH = "~/.local/share/Steam"
+        else:
+            raise OSError("Unsupported operating system")
+    
+    return STEAM_PATH
 
 # Launch an Epic game using the appropriate system command
 def launch_epic_game(app_name):

@@ -1,27 +1,31 @@
 # Games Launcher
 
-A command-line tool for launching Steam and Epic Games efficiently.
+A sophisticated command-line tool for launching Steam and Epic Games efficiently across multiple platforms.
 
 ## Features
 
 - Launch Steam and Epic Games directly from the command line
 - Intelligent game name matching, tolerant of typos and partial inputs
-- Random roguelike launcher
+- Special handling for Mod the Spire integration with Slay the Spire
+- Random roguelike game launcher
 - Cross-platform support (Windows, macOS, Linux)
 - Smart game suggestions for misspelled names
+- Ability to list games from Steam or Epic libraries
+- Customizable launch options for specific games
 
 ## Prerequisites
 
 - Python 3.6+
 - Steam and/or Epic Games Launcher installed
 - Games installed on your system
+- Java Runtime Environment (JRE) for Mod the Spire functionality
 
 ## Installation
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/Games-Launcher.git
-   cd Games-Launcher
+   git clone https://github.com/yourusername/GamesLauncher.git
+   cd GamesLauncher
    ```
 
 2. Install dependencies:
@@ -53,16 +57,29 @@ A command-line tool for launching Steam and Epic Games efficiently.
 
 2. Alternatively, you can edit `config.py` directly, but be cautious about sharing this file.
 
-### Epic Games Configuration
+3. The launcher will automatically fetch your Steam games using the Steam API.
 
-1. Open or create `data/lists/epic_games.json` in the GamesLauncher folder and add your games:
+4. For manual additions edit `data/lists/steam_games.json` or `data/lists/steam_roguelikes.json`:
+   ```json
+   {
+       "grand theft auto v": "271590",
+       "tabletop simulator": "286160"
+   }
+   ```
+
+### Launch Options Configuration
+
+1. Open `data/launch_options.json` to add special launch options for games:
 
    ```json
    {
-     "game name": "epic_game_id",
-     "another game": "another_epic_game_id"
+     "playerunknown's battlegrounds": "-KoreanRating"
    }
    ```
+
+### Epic Games Setup
+
+1. Open or create `data/lists/epic_games.json` in the GamesLauncher folder and add your games
 
 2. To find the Epic Games ID:
    - Open Epic Games Launcher
@@ -83,58 +100,6 @@ A command-line tool for launching Steam and Epic Games efficiently.
    }
    ```
 
-### Steam Games Configuration
-
-1. To find a Steam App ID:
-   - Go to the game's Steam store page
-   - The App ID is the number after `/app/` in the URL
-   - Example: For "Slay the Spire", the URL is `https://store.steampowered.com/app/646570/Slay_the_Spire/`, so the App ID is `646570`
-
-2. Open `data/lists/steam_roguelikes.json` or `data/lists/steam_games.json` in the GamesLauncher folder and add games:
-   ```json
-   {
-     "game name": "steam_app_id",
-     "another game": "another_steam_app_id"
-   }
-   ```
-
-   Example:
-   ```json
-   {
-     "slay the spire": "646570",
-     "hades": "1145360"
-   }
-   ```
-
-### Launch Options Configuration
-
-1. Open `data/launch_options.json` in the GamesLauncher folder to add special launch options for games:
-
-   ```json
-   {
-     "game name": "launch options",
-     "another game": "other launch options",
-     "special game": {
-       "alternate_app_id": "alternate_steam_app_id",
-       "name": "Alternate Game Name"
-     }
-   }
-   ```
-
-   Example:
-   ```json
-   {
-     "playerunknown's battlegrounds": "-KoreanRating",
-     "pubg": "-KoreanRating",
-     "slay the spire": {
-       "alternate_app_id": "1605060",
-       "name": "Mod the Spire"
-     }
-   }
-   ```
-
-   These launch options will be applied when starting the game through the launcher. For special cases like "Slay the Spire", an alternate Steam app ID can be specified to launch a different executable (e.g., "Mod the Spire").
-
 ## Usage
 
 ### Command Line
@@ -154,8 +119,14 @@ python game_launcher.py "Slay The Spire"
 2. Add this function:
    ```powershell
    function game {
-       param($gameName)
-       python C:\path\to\Games-Launcher\game_launcher.py $gameName
+       param([Parameter(ValueFromRemainingArguments=$true)][string]$gameName)
+       if ($gameName) {
+           $pythonScript = "C:\path\to\Games-Launcher\game_launcher.py"
+           python $pythonScript $gameName
+       } else {
+           Write-Host "Usage: game <game_name>"
+           Write-Host "Note: You can type the game name without quotes."
+       }
    }
    ```
 
@@ -168,7 +139,7 @@ Now you can launch games with:
 game Slay The Spire
 ```
 
-### Key Features
+## Key Features
 
 The launcher offers flexible input handling:
 
@@ -177,8 +148,9 @@ The launcher offers flexible input handling:
 - Recognizes common acronyms: `game gtav` for "Grand Theft Auto V"
 - Case-insensitive: `game GRAND THEFT AUTO V` works as expected
 - Handles multi-word titles without quotes: `game slay the spire`
-
-Additional feature: Use `game random` to launch a random roguelike.
+- Special handling for Mod the Spire: Automatically launches Slay the Spire with mods if available
+- Random roguelike: Use `game random` to launch a random roguelike game
+- List games: Use `game list steam` or `game list epic` to see your game libraries
 
 Note: The launcher will always confirm before launching if there's any ambiguity.
 
@@ -188,6 +160,7 @@ If you encounter issues:
 - Verify that Steam and Epic Games Launcher are properly installed
 - Ensure game paths in `game_launcher.py` match your installation directories
 - For Epic Games, confirm that game names in `data/lists/epic_games.json` are accurate
+- Check if Java is installed and properly configured for Mod the Spire functionality
 
 ## Contributing
 
