@@ -59,7 +59,7 @@ def send_to_platform(game_name):
         print(f"Launching {game_name.title()} from Epic Games...")
         launch_epic_game(app_id)
     else:
-        app_id = game_dict.fetch_steam_game(game_name)
+        app_id = game_dict.fetch_steam_games(game_name)
         if app_id:
             steam_games[game_name] = app_id
             game_dict.save_json_data(game_dict.STEAM_GAMES_FILE, steam_games)
@@ -183,10 +183,58 @@ def list_games(library):
 
     if not games:
         print(f"No games found in the {library.title()} library.")
-    else:
-        print(f"Games in your {library.title()} library:")
-        for game in sorted(games.keys()):
-            print(f"- {game.title()}")
+        return
+
+    # Group similar game titles
+    game_groups = {}
+    for game in sorted(games.keys()):
+        # First, split by " - " for variants
+        base_name = game.split(' - ')[0].strip()
+        
+        # Then, try to find series (like "The Jackbox Party Pack X")
+        series_parts = base_name.split()
+        for i in range(len(series_parts) - 1, -1, -1):
+            try:
+                # Check if the last part is a number
+                int(series_parts[i])
+                # If it is, use everything before it as the series name
+                series_name = ' '.join(series_parts[:i])
+                if series_name:  # Only group if there's a name before the number
+                    base_name = series_name
+                break
+            except ValueError:
+                continue
+
+        if base_name not in game_groups:
+            game_groups[base_name] = []
+        game_groups[base_name].append(game)
+
+    # Display games, grouping variants and series together
+    print(f"Games in your {library.title()} library:")
+    for base_name, variants in sorted(game_groups.items()):
+        if len(variants) == 1:
+            # Single game, no variants
+            print(f"- {utils.format_game_title(variants[0])}")
+        else:
+            # Check if this is a numbered series
+            is_series = all(any(str(i) in v for i in range(10)) for v in variants)
+            if is_series and len(variants) > 2:  # More than 2 numbered entries
+                print(f"- {utils.format_game_title(base_name)}")
+                for variant in sorted(variants):
+                    # Extract just the number or variant part
+                    if ' - ' in variant:
+                        suffix = variant.split(' - ', 1)[1]
+                        print(f"  • {utils.format_game_title(suffix)}")
+                    else:
+                        number = next((n for n in variant.split() if n.isdigit()), '')
+                        print(f"  • {number}")
+            else:
+                # Regular variant handling
+                print(f"- {utils.format_game_title(base_name)}")
+                for variant in sorted(variants):
+                    if variant != base_name:
+                        variant_suffix = variant.split(' - ', 1)[1] if ' - ' in variant else variant
+                        print(f"  • {utils.format_game_title(variant_suffix)}")
 
 # Main execution block
 if __name__ == "__main__":

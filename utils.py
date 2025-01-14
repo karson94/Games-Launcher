@@ -72,6 +72,66 @@ def find_java_path():
 
 # Game-related functions
 
+def normalize_game_name(game_name):
+    """
+    Normalize game name for consistent formatting and matching.
+    
+    :param game_name: The game name to normalize
+    :return: Normalized game name
+    """
+    # Common transformations
+    transformations = [
+        lambda x: x.lower(),  # Lowercase
+        lambda x: x.replace(" ", ""),  # Remove spaces
+        lambda x: x.replace("2", "ii"),  # Replace numbers with roman numerals
+        lambda x: x.replace("3", "iii"),
+        lambda x: x.replace("4", "iv"),
+        lambda x: x.replace("5", "v"),
+        lambda x: x.replace("6", "vi"),
+        lambda x: x.replace("7", "vii"),
+        lambda x: x.replace("8", "viii"),
+        lambda x: x.replace("9", "ix"),
+        lambda x: x.replace("10", "x"),
+    ]
+    
+    return [transform(game_name) for transform in transformations]
+
+def format_game_title(game_name):
+    """
+    Format game title for display.
+    
+    :param game_name: The game name to format
+    :return: Formatted game title
+    """
+    # Convert roman numerals to numbers (case-insensitive)
+    roman_to_num = {
+        'ii': '2', 'iii': '3', 'iv': '4', 'v': '5',
+        'vi': '6', 'vii': '7', 'viii': '8', 'ix': '9', 'x': '10'
+    }
+    
+    # Split the title into words
+    words = game_name.split()
+    
+    # Process each word
+    for i, word in enumerate(words):
+        word_lower = word.lower()
+        
+        # Convert roman numerals to numbers
+        for roman, num in roman_to_num.items():
+            if word_lower == roman:
+                words[i] = num
+                break
+        else:  # no roman numeral found
+            # Fix capitalization after apostrophes
+            if "'" in word:
+                parts = word.split("'")
+                # Capitalize first part, keep second part's original case
+                words[i] = parts[0].capitalize() + "'" + parts[1]
+            else:
+                words[i] = word.capitalize()
+    
+    return " ".join(words)
+
 def find_closest_match(game_name):
     """
     Find the closest matching game name from the available games.
@@ -82,22 +142,6 @@ def find_closest_match(game_name):
     steam_games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
     epic_games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
     all_games = list(steam_games.keys()) + list(epic_games.keys())
-    
-    # Common transformations
-    transformations = [
-        lambda x: x,  # Original input
-        lambda x: x.lower(),  # Lowercase
-        lambda x: x.replace(" ", ""),  # Remove spaces
-        lambda x: x.replace("2", "ii"),  # Replace 2 with ii
-        lambda x: x.replace("3", "iii"),  # Replace 3 with iii
-        lambda x: x.replace("4", "iv"),  # Replace 4 with iv
-        lambda x: x.replace("5", "v"),  # Replace 5 with v
-        lambda x: x.replace("6", "vi"),  # Replace 6 with vi
-        lambda x: x.replace("7", "vii"),  # Replace 7 with vii
-        lambda x: x.replace("8", "viii"),  # Replace 8 with viii
-        lambda x: x.replace("9", "ix"),  # Replace 9 with ix
-        lambda x: x.replace("10", "x"),  # Replace 10 with x
-    ]
     
     # Common game name aliases
     aliases = {
@@ -125,12 +169,12 @@ def find_closest_match(game_name):
         if alias_match in all_games:
             return [alias_match]
     
-    # Apply transformations and check for matches
-    for transform in transformations:
-        transformed_name = transform(game_name)
-        partial_matches = [game for game in all_games if transformed_name.lower() in game.lower()]
-        if partial_matches:
-            return partial_matches
+    # Try normalized versions
+    normalized_input = normalize_game_name(game_name)
+    for game in all_games:
+        normalized_game = normalize_game_name(game)
+        if any(n_input in n_game for n_input, n_game in zip(normalized_input, normalized_game)):
+            return [game]
     
     # If no matches found, use get_close_matches for fuzzy matching
     return get_close_matches(game_name.lower(), all_games, n=3, cutoff=0.6)
