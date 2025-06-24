@@ -168,3 +168,19 @@ Contributions are welcome. Please submit a pull request with your proposed chang
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
+## Managing Game Aliases (Shortcuts)
+
+You can add shortcuts (aliases) for any game using the alias command:
+
+```
+python launcher.py alias <game_name> <shortcut>
+```
+
+For example, to add 'rv' as a shortcut for 'ravenswatch':
+
+```
+python launcher.py alias ravenswatch rv
+```
+
+Aliases are stored in `data/alias.json` and are used for fuzzy matching and quick launching.
+
