@@ -1,5 +1,6 @@
-# Ignore personal configuration file
+# Ignore personal files
 personal_config.py
+gameslauncher.log
 
 # Ignore personal game json files
 *.json
