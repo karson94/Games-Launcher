@@ -3,6 +3,9 @@ from difflib import get_close_matches
 from config import STEAM_API_KEY, STEAM_ID
 from game_dict import game_manager
 import shutil, winreg
+from utils import get_logger, add_alias, find_and_confirm_game, get_aliases, remove_alias, find_game_with_alias
+
+logger = get_logger(__name__)
 
 # Global variables
 SYSTEM_COMMAND = None
@@ -21,13 +24,13 @@ def initialize_globals():
     JAVA_PATH = find_java_path()
 
     if not STEAM_PATH:
-        print("Error: Unable to determine Steam installation path.")
+        logger.error("Error: Unable to determine Steam installation path.")
         sys.exit(1)
     if not JAVA_PATH:
-        print("Error: Unable to find Java installation.")
+        logger.error("Error: Unable to find Java installation.")
         sys.exit(1)
     if not SYSTEM_COMMAND:
-        print("Error: Unable to determine system command.")
+        logger.error("Error: Unable to determine system command.")
         sys.exit(1)
 
 # System-related functions
@@ -36,7 +39,7 @@ def get_system_command():
     system = platform.system()
     if system == "Windows":
         return "start"
-    elif system == "Darwin":  # macOS
+    elif system == "Darwin":
         return "open"
     elif system == "Linux":
         return "xdg-open"
@@ -47,7 +50,7 @@ def get_system_command():
 def get_steam_path():
     if platform.system() == "Windows":
         return "C:\\Program Files (x86)\\Steam"
-    elif platform.system() == "Darwin":  # macOS
+    elif platform.system() == "Darwin":
         return "~/Library/Application Support/Steam"
     elif platform.system() == "Linux":
         return "~/.local/share/Steam"
@@ -117,37 +120,6 @@ def format_game_title(game_name):
                 words[i] = word.capitalize()
     return " ".join(words)
 
-def find_closest_match(game_name):
-    steam_games = game_manager.load_json_data(game_manager.steam_games_file, {})
-    epic_games = game_manager.load_json_data(game_manager.epic_games_file, {})
-    all_games = list(steam_games.keys()) + list(epic_games.keys())
-    aliases = {
-        "tf2": "team fortress 2",
-        "csgo": "counter-strike: global offensive",
-        "gta5": "grand theft auto v",
-        "gtav": "grand theft auto v",
-        "pubg": "playerunknown's battlegrounds",
-        "dota": "dota 2",
-        "lol": "league of legends",
-        "wow": "world of warcraft",
-        "r6": "tom clancy's rainbow six siege",
-        "r6s": "tom clancy's rainbow six siege",
-        "sts": "slay the spire",
-    }
-    for game in all_games:
-        if game_name.lower() == game.lower():
-            return [game]
-    if game_name.lower() in aliases:
-        alias_match = aliases[game_name.lower()]
-        if alias_match in all_games:
-            return [alias_match]
-    normalized_input = normalize_game_name(game_name)
-    for game in all_games:
-        normalized_game = normalize_game_name(game)
-        if any(n_input in n_game for n_input, n_game in zip(normalized_input, normalized_game)):
-            return [game]
-    return get_close_matches(game_name.lower(), all_games, n=3, cutoff=0.6)
-
 def confirm_game_choice(suggested_game, original_input):
     if suggested_game.lower() != original_input:
         confirm = input(f"Did you mean '{suggested_game.title()}?' (y/n): ").lower()
@@ -203,9 +175,9 @@ def launch_steam_game(game_name):
             subprocess.Popen([steam_exe, f"steam://rungameid/{app_id}"])
             print(f"Launching {game_name.title()}...")
         else:
-            print("Steam executable not found.")
+            logger.error("Steam executable not found.")
     else:
-        print(f"Game '{game_name}' not found in Steam library.")
+        logger.error(f"Game '{game_name}' not found in Steam library.")
 
 def launch_epic_game(game_name):
     epic_games = game_manager.load_json_data(game_manager.epic_games_file, {})
@@ -215,9 +187,9 @@ def launch_epic_game(game_name):
             subprocess.Popen([epic_path])
             print(f"Launching {game_name.title()}...")
         else:
-            print(f"Game executable not found at {epic_path}")
+            logger.error(f"Game executable not found at {epic_path}")
     else:
-        print(f"Game '{game_name}' not found in Epic library.")
+        logger.error(f"Game '{game_name}' not found in Epic library.")
 
 def launch_game(game_name):
     game_name = find_and_confirm_game(game_name)
@@ -229,11 +201,14 @@ def launch_game(game_name):
         elif game_name.lower() in epic_games:
             launch_epic_game(game_name)
         else:
-            print(f"Game '{game_name}' not found in any library.")
+            logger.error(f"Game '{game_name}' not found in any library.")
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python launcher.py [list|launch] [steam|epic] [game_name]")
+        print("Usage: python launcher.py [list|launch|alias] [steam|epic|game_name|alias] [shortcut]")
+        print("Alias usage:")
+        print("  python launcher.py alias list [game]")
+        print("  python launcher.py alias add <game> <shortcut>")
         sys.exit(1)
 
     command = sys.argv[1].lower()
@@ -253,7 +228,79 @@ def main():
             for game in sorted(epic_games.keys()):
                 print(f"- {game.title()}")
         else:
-            print("Invalid platform. Use 'steam' or 'epic'.")
+            logger.error("Invalid platform. Use 'steam' or 'epic'.")
+        return
+    elif command == "alias":
+        if len(sys.argv) < 3:
+            print("Alias usage:")
+            print("  python launcher.py alias list [game]")
+            print("  python launcher.py alias add <game> <shortcut>")
+            sys.exit(1)
+        alias_cmd = sys.argv[2].lower()
+        if alias_cmd == "list":
+            aliases = get_aliases()
+            if len(sys.argv) == 3:
+                # List all aliases
+                if not aliases:
+                    print("No aliases found.")
+                else:
+                    print("Aliases:")
+                    for game, alias_list in aliases.items():
+                        print(f"{game}: {', '.join(alias_list) if alias_list else '(none)'}")
+            else:
+                # List aliases for a specific game (with fuzzy/alias matching)
+                input_name = " ".join(sys.argv[3:])
+                resolved_game = find_and_confirm_game(input_name)
+                if not resolved_game:
+                    print(f"Could not find a game matching '{input_name}'.")
+                    sys.exit(1)
+                alias_list = aliases.get(resolved_game.lower(), [])
+                print(f"Aliases for '{resolved_game}': {', '.join(alias_list) if alias_list else '(none)'}")
+            return
+        elif alias_cmd == "add":
+            if len(sys.argv) < 5:
+                print("Usage: python launcher.py alias add <game> <shortcut>")
+                sys.exit(1)
+            input_name = sys.argv[3]
+            shortcut = sys.argv[4]
+            resolved_game = find_and_confirm_game(input_name)
+            if not resolved_game:
+                print(f"Could not find a game matching '{input_name}'.")
+                sys.exit(1)
+            result = add_alias(resolved_game, shortcut)
+            if result is True:
+                print(f"Added alias '{shortcut}' for game '{resolved_game}'.")
+            elif result is False:
+                print(f"Alias '{shortcut}' already exists for game '{resolved_game}'.")
+            else:
+                # result is the conflicting game
+                print(f"Alias '{shortcut}' already exists for game '{result}'.")
+                confirm = input(f"Do you want to remove alias '{shortcut}' from '{result}' and add it to '{resolved_game}'? (y/n): ").strip().lower()
+                if confirm == 'y':
+                    remove_alias(result, shortcut)
+                    add_alias(resolved_game, shortcut)
+                    print(f"Alias '{shortcut}' moved from '{result}' to '{resolved_game}'.")
+                else:
+                    print("Action cancelled. Alias not added.")
+            return
+        elif alias_cmd == "remove":
+            if len(sys.argv) < 5:
+                print("Usage: python launcher.py alias remove <game> <shortcut>")
+                sys.exit(1)
+            input_name = sys.argv[3]
+            shortcut = sys.argv[4]
+            resolved_game = find_and_confirm_game(input_name)
+            if not resolved_game:
+                print(f"Could not find a game matching '{input_name}'.")
+                sys.exit(1)
+            if remove_alias(resolved_game, shortcut):
+                print(f"Removed alias '{shortcut}' from game '{resolved_game}'.")
+            else:
+                print(f"Alias '{shortcut}' not found for game '{resolved_game}'.")
+            return
+        else:
+            print("Unknown alias subcommand. Use 'list', 'add', or 'remove'.")
+            sys.exit(1)
     elif command == "launch":
         if len(sys.argv) < 3:
             print("Usage: python launcher.py launch [game_name]")
@@ -261,13 +308,15 @@ def main():
         game_name = " ".join(sys.argv[2:])
         launch_game(game_name)
     else:
-        print("Invalid command. Use 'list' or 'launch'.")
+        # If command n/a, launch game
+        game_name = " ".join(sys.argv[1:])
+        launch_game(game_name)
 
 if __name__ == "__main__":
     initialize_globals()
     
     if not STEAM_API_KEY or not STEAM_ID:
-        print("Error: STEAM_API_KEY or STEAM_ID not set. Please set them in config.py or personal_config.py")
+        logger.error("Error: STEAM_API_KEY or STEAM_ID not set. Please set them in config.py or personal_config.py")
         sys.exit(1)
 
     main()

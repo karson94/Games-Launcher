@@ -2,6 +2,87 @@ import os, sys, platform, subprocess, winreg
 from difflib import get_close_matches
 from config import STEAM_API_KEY, STEAM_ID
 import game_dict
+import json
+import logging
+
+def get_logger(name=__name__):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    if not logger.hasHandlers():
+        file_handler = logging.FileHandler('gameslauncher.log')
+        file_handler.setLevel(logging.DEBUG)
+        file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(file_formatter)
+
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_formatter = logging.Formatter('%(levelname)s - %(message)s')
+        console_handler.setFormatter(console_formatter)
+
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+    return logger
+
+# Aliases/shortcuts management
+ALIAS_FILE = os.path.join(os.path.dirname(__file__), 'data', 'alias.json')
+
+def load_aliases():
+    if not os.path.exists(ALIAS_FILE):
+        return {}
+    with open(ALIAS_FILE, 'r') as f:
+        return json.load(f)
+
+def save_aliases(aliases):
+    os.makedirs(os.path.dirname(ALIAS_FILE), exist_ok=True)
+    with open(ALIAS_FILE, 'w') as f:
+        json.dump(aliases, f, indent=2)
+
+def get_aliases():
+    return load_aliases()
+
+def find_game_with_alias(alias):
+    aliases = load_aliases()
+    alias = alias.lower()
+    for game, alias_list in aliases.items():
+        if alias in [a.lower() for a in alias_list]:
+            return game
+    return None
+
+def add_alias(game_name, alias):
+    aliases = load_aliases()
+    game_key = game_name.lower()
+    alias = alias.lower()
+    # Check if alias exists for another game
+    for g, alias_list in aliases.items():
+        if alias in [a.lower() for a in alias_list]:
+            if g != game_key:
+                return g  # Conflict: alias exists for another game
+            else:
+                return False  # Already exists for this game
+    if game_key not in aliases:
+        aliases[game_key] = []
+    if alias not in aliases[game_key]:
+        aliases[game_key].append(alias)
+        save_aliases(aliases)
+        return True
+    return False
+
+def get_game_for_alias(input_name):
+    aliases = load_aliases()
+    for game, alias_list in aliases.items():
+        if input_name.lower() == game.lower() or input_name.lower() in [a.lower() for a in alias_list]:
+            return game
+    return None
+
+def remove_alias(game_name, alias):
+    aliases = load_aliases()
+    game_key = game_name.lower()
+    alias = alias.lower()
+    if game_key in aliases and alias in aliases[game_key]:
+        aliases[game_key].remove(alias)
+        save_aliases(aliases)
+        return True
+    return False
 
 # System-related functions
 
@@ -19,7 +100,8 @@ def get_system_command():
     elif system == "Linux":
         return "xdg-open"
     else:
-        print(f"{system} is an unsupported operating system")
+        logger = get_logger(__name__)
+        logger.error(f"{system} is an unsupported operating system")
         sys.exit(1)
 
 def get_steam_path():
@@ -133,53 +215,25 @@ def format_game_title(game_name):
     return " ".join(words)
 
 def find_closest_match(game_name):
-    """
-    Find the closest matching game name from the available games.
-    
-    :param game_name: The input game name to match
-    :return: A list of matching game names
-    """
     steam_games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
     epic_games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
     all_games = list(steam_games.keys()) + list(epic_games.keys())
-    
-    # Common game name aliases
-    aliases = {
-        "tf2": "team fortress 2",
-        "csgo": "counter-strike: global offensive",
-        "gta5": "grand theft auto v",
-        "gtav": "grand theft auto v",
-        "pubg": "playerunknown's battlegrounds",
-        "dota": "dota 2",
-        "lol": "league of legends",
-        "wow": "world of warcraft",
-        "r6": "tom clancy's rainbow six siege",
-        "r6s": "tom clancy's rainbow six siege",
-        "sts": "slay the spire",
-        "raven": "ravenswatch",
-        "ravenwatch": "ravenswatch",
-        "rws": "ravenswatch",
-    }
-    
+    aliases = get_aliases()
     # Check for exact matches first (case-insensitive)
     for game in all_games:
         if game_name.lower() == game.lower():
             return [game]
-    
-    # Check aliases
-    if game_name.lower() in aliases:
-        alias_match = aliases[game_name.lower()]
-        if alias_match in all_games:
-            return [alias_match]
-    
+    # Check aliases from JSON
+    for game, alias_list in aliases.items():
+        if game_name.lower() in [a.lower() for a in alias_list]:
+            if game in all_games:
+                return [game]
     # Try normalized versions
     normalized_input = normalize_game_name(game_name)
     for game in all_games:
         normalized_game = normalize_game_name(game)
         if any(n_input in n_game for n_input, n_game in zip(normalized_input, normalized_game)):
             return [game]
-    
-    # If no matches found, use get_close_matches for fuzzy matching
     return get_close_matches(game_name.lower(), all_games, n=3, cutoff=0.6)
 
 def confirm_game_choice(suggested_game, original_input):
@@ -196,13 +250,6 @@ def confirm_game_choice(suggested_game, original_input):
     return True
 
 def handle_multiple_matches(matches, original_input):
-    """
-    Handle multiple game matches by presenting options to the user.
-    
-    :param matches: A list of matching game names
-    :param original_input: The original input from the user
-    :return: The selected game name or None if cancelled
-    """
     print(f"Multiple matches found for '{original_input}':")
     for i, match in enumerate(matches, 1):
         print(f"{i}. {match.title()}")
@@ -213,7 +260,8 @@ def handle_multiple_matches(matches, original_input):
     try:
         return matches[int(choice) - 1]
     except (ValueError, IndexError):
-        print("Invalid choice. Cancelling launch.")
+        logger = get_logger(__name__)
+        logger.warning("Invalid choice. Cancelling launch.")
         return None
 
 def find_and_confirm_game(game_name):
@@ -225,7 +273,7 @@ def find_and_confirm_game(game_name):
     """
     original_input = game_name.lower()
     matches = find_closest_match(original_input)
-    
+    logger = get_logger(__name__)
     if len(matches) == 1:
         game_name = matches[0]
         if not confirm_game_choice(game_name, original_input):
@@ -235,8 +283,7 @@ def find_and_confirm_game(game_name):
         if game_name is None:
             return None
     else:
-        print(f"No matches found for '{original_input}'.")
+        logger.warning(f"No matches found for '{original_input}'.")
         print_all_games()
         return None
-    
     return game_name
