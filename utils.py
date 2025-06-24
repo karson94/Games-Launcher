@@ -156,6 +156,9 @@ def find_closest_match(game_name):
         "r6": "tom clancy's rainbow six siege",
         "r6s": "tom clancy's rainbow six siege",
         "sts": "slay the spire",
+        "raven": "ravenswatch",
+        "ravenwatch": "ravenswatch",
+        "rws": "ravenswatch",
     }
     
     # Check for exact matches first (case-insensitive)
