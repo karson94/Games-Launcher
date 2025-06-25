@@ -1,7 +1,6 @@
 import os, sys, platform, subprocess, winreg 
 from difflib import get_close_matches
 from config import STEAM_API_KEY, STEAM_ID
-import game_dict
 import json
 import logging
 
@@ -215,8 +214,9 @@ def format_game_title(game_name):
     return " ".join(words)
 
 def find_closest_match(game_name):
-    steam_games = game_dict.load_json_data(game_dict.STEAM_GAMES_FILE, {})
-    epic_games = game_dict.load_json_data(game_dict.EPIC_GAMES_FILE, {})
+    from game_dict import game_manager  # Moved import here to avoid circular import
+    steam_games = game_manager.load_json_data(game_manager.steam_games_file, {})
+    epic_games = game_manager.load_json_data(game_manager.epic_games_file, {})
     all_games = list(steam_games.keys()) + list(epic_games.keys())
     aliases = get_aliases()
     # Check for exact matches first (case-insensitive)

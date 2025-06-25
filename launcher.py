@@ -3,7 +3,7 @@ from difflib import get_close_matches
 from config import STEAM_API_KEY, STEAM_ID
 from game_dict import game_manager
 import shutil, winreg
-from utils import get_logger, add_alias, find_and_confirm_game, get_aliases, remove_alias, find_game_with_alias
+from utils import get_logger, add_alias, find_and_confirm_game, find_closest_match, get_aliases, remove_alias, find_game_with_alias
 
 logger = get_logger(__name__)
 
